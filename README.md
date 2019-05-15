@@ -2,6 +2,7 @@
 AIR Coding Assignment
 
 This assignment uses two csv files that are uploaded here along with the .rmd code file and final knitted html file.
+
 In this assignment, I created an interactive scatter plot, ran and interpreted multiple linear regressions, made adjustments for the hamming edit-distance algorithm, and performed data cleaning tasks.
 
 The specific assignment instructions are below:
