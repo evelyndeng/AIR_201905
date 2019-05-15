@@ -1,0 +1,267 @@
+---
+title: 'AIR Coding Assignment'
+author: "Ye (Evelyn) Deng"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    code_folding: hide
+  html_notebook:
+    toc: yes
+    code_folding: hide
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+##1. Regression Modelling
+
+For this exercise, we are interested in better understanding the shapes of iris flowers. Specifically, we are interested in whether the petal length and sepal length are related. We will use the “iris” data set which is available in both R and Python (and also attached as a csv, “Iris_Data.csv”) which includes the petal and sepal lengths and widths and the species of iris to which each example belongs.
+
+```{r, messages = FALSE}
+#load packages
+library(tidyverse)
+
+#set working directory
+setwd("C:/Users/dfz12/Desktop/AIR Coding Test")
+```
+
+```{r}
+#read in data
+irises <- read_csv("Iris_Data.csv")
+
+#view data
+summary(irises)
+irises
+
+#rename variables
+names(irises) <- c("sepal_length", "sepal_width", "petal_length", 
+                   "petal_width", "species")
+
+#make the species variable a factor
+irises$species <- as.factor(irises$species)
+```
+
+###a. 
+How many irises belong to each species?
+
+```{r}
+#count number of irises for each species
+irises %>%
+  group_by(species) %>%
+  summarise(count = n())
+
+```
+
+**There are 50 irises for each of the three species.**
+
+###b. 
+Make a scatterplot of petal length vs sepal length. Color the dots according to species. Document your observations (2-3 sentences)
+
+```{r}
+library(ggplot2)
+library(ggthemes)
+library(plotly)
+
+p <- ggplot(irises, aes(x=petal_length, y=sepal_length,
+                        text = paste('Petal Length: ', petal_length,
+                                 '<br>Sepal Length: ', sepal_length,
+                                 '<br>Species: ', species))) +
+  geom_jitter(alpha = 0.5, size=1.5, 
+              aes(color=species), 
+              position=position_jitter(width=0.05, height = 0.05)) +
+  scale_x_continuous(limits=c(1,7), breaks = c(1:7)) + 
+  scale_y_continuous(limits=c(4,8), breaks = c(4:8)) + 
+  theme_bw() +
+  labs(x = "Petal Length", y = "Sepal Length", color = "Species",
+       title = "Sepal and Petal Length of Different Iris Species")
+
+ggplotly(p, tooltip = c("text"))
+
+```
+
+**Overall, not taking into account species, it looks like there is a strong positive correlation between petal length and sepal length. Broken down by species, this correlation holds for species 1 and 2. However, the correlation is unclear for species 0 based on just this visual. Additionally, the petal and sepal lengths seem to be the shortest for species 0, followed by species 1, and finally species 2 has the longest lengths, on average.**
+
+###c.
+Fit a regression model predicting sepal length based on petal length, petal width and sepal width (you do not need to test any of the regression assumptions).
+
+```{r}
+lm1 <- lm(sepal_length ~ petal_length + petal_width + sepal_width, data = irises)
+summary(lm1)
+```
+
+###d.
+Describe the results of your regression, focusing on the relationship between sepal length and petal length.
+
+**Petal length and sepal length have a highly significant and highly positive correlation. For each unit increase in petal length, sepal length is predicted to increase by about 0.71 units. This correlation is significant with a p-value close to 0 and a corresponding t-value of about 7.37, leaving practically no room for this to be a chance correlation due to sampling.**
+
+###e.
+Extra Credit: Fit a regression model predicting sepal length based on petal length, petal width, sepal width and species (you do not need to test for any of the “classical” regression assumptions).  This is the same as part c but also with species as a predictor. Describe the results.
+
+```{r}
+lm1 <- lm(sepal_length ~ petal_length + petal_width + sepal_width + species, data = irises)
+summary(lm1)
+```
+
+**All factors in this regression model are significantly correlated with sepal_length at the p < 0.05 level.**
+
+**The intercept has high significance with a p-value close to 0. It gives an estimate of the sepal length of iris flowers of species 0, with hypothetical petal length, petal width, and sepal width of 0. For this species, each unit increase in petal length predicts a sepal length increase of 0.83 units (p close to 0), each unit increase in petal width predicts a sepal length decrease of 0.32 units (p<0.05), and each unit increase in sepal width predicts a sepal length increase of 0.50 units (p close to 0).**
+
+**Irises of species 1 have sepal lengths that are 0.71 units shorter than irises of species 0, given that all the other measurements are the same. This is highly significant to the p < 0.01 level. Similarly, irises of species 2 have sepal lengths that are 1.01 units shorter than irises of species 0, given that all other measurements are the same. This is highly significant at the p < 0.01 level as well.**
+
+
+##2. Implementing an Edit-Distance Algorithm
+Write a program to calculate a variant of the Hamming distance with two key modifications to the standard algorithm. In information theory, the Hamming distance is a measure of the distance between two text strings. This is calculated by adding one to the Hamming distance for each character that is different between the two strings. For example, “kitten" and “mitten" have a Hamming distance of 1. See https://en.wikipedia.org/wiki/Hamming_distance for more information.
+
+###Constructing the Algorithm
+```{r}
+#write a function calculating the original hamming distance, based on the adist function, which calculates the Levenshtein distance.
+library(e1071)
+
+hamming <- function(a, b) {
+  a <- as.character(a)
+  b <- as.character(b)
+  if (nchar(a) != nchar(b)) {
+    print("Error: these strings do not have the same length")
+    } else {
+      distance <- adist(a, b, ignore.case=TRUE)
+      print(as.numeric(distance))
+    }
+}
+```
+
+Modifications to the standard Hamming distance algorithm for the purposes of this exercise include: 
+
+1) Add .5 to the Hamming distance if a capital letter is switched for a lower case letter unless it is in the first position.  Examples include: 
+-	"Kitten" and "kitten" have a distance of 0 
+-	"kitten" and "KiTten" have a Hamming distance of .5.
+-	"Puppy" and "POppy" have a distance of 1.5 (1 for the different letter, additional .5 for the different capitalization). 
+
+```{r}
+#modify the function by adding in the case change scoring rule
+hamming_1 <- function(a, b) {
+  a <- as.character(a)
+  b <- as.character(b)
+  if (nchar(a) != nchar(b)) {
+    print("Error: these strings do not have the same length")
+    } else {
+      distance_initial <- adist(a, b, ignore.case=TRUE)
+      distance_caps = 0
+      if (nchar(a) > 1) {
+        a_split<-unlist(strsplit(a, split = ""))
+        b_split<-unlist(strsplit(b, split = ""))
+        a_uppers_i <- which((a_split %in% LETTERS)==TRUE)
+        b_uppers_i <- which((b_split %in% LETTERS)==TRUE)
+        diff_case <- c(setdiff(a_uppers_i, b_uppers_i),
+                       setdiff(b_uppers_i, a_uppers_i)) 
+        distance_caps = length(diff_case[diff_case!=1])/2
+      } 
+      distance <- distance_initial + distance_caps
+      print(as.numeric(distance))
+    }
+}
+```
+
+2) Consider S and Z (and s and z) to be the same letter. For example, "analyze" has a distance of 0 from "analyse".
+```{r}
+#modify the function by adding in the letter equivalency scoring rule
+hamming_2 <- function(a, b) {
+  a <- as.character(a)
+  b <- as.character(b)
+  if (nchar(a) != nchar(b)) {
+    print("Error: these strings do not have the same length")
+    } else {
+      a <- gsub("s", "z", gsub("S", "Z", a))
+      b <- gsub("s", "z", gsub("S", "Z", b))
+      distance_initial <- adist(a, b, ignore.case=TRUE)
+      distance_caps = 0
+      if (nchar(a) > 1) {
+        a_split<-unlist(strsplit(a, split = ""))
+        b_split<-unlist(strsplit(b, split = ""))
+        a_uppers_i <- which((a_split %in% LETTERS)==TRUE)
+        b_uppers_i <- which((b_split %in% LETTERS)==TRUE)
+        diff_case <- c(setdiff(a_uppers_i, b_uppers_i),
+                       setdiff(b_uppers_i, a_uppers_i)) 
+        distance_caps = length(diff_case[diff_case!=1])/2
+      } 
+      distance <- distance_initial + distance_caps
+      print(as.numeric(distance))
+    }
+}
+```
+
+###Use the Algorithm
+Use the program you wrote to score the following strings:
+- "data Science" to  "Data Sciency"
+- "organizing" to "orGanising"
+- "AGPRklafsdyweIllIIgEnXuTggzF" to "AgpRkliFZdiweIllIIgENXUTygSF")
+  
+```{r}
+hamming_2("data Science", "Data Sciency")
+hamming_2("organizing", "orGanising")
+hamming_2("AGPRklafsdyweIllIIgEnXuTggzF",
+          "AgpRkliFZdiweIllIIgENXUTygSF")
+```
+
+###Applications of the Algorithm
+
+**This algorithm can be used to identify the same or similar text, allowing for alternate spellings, capitalization, and typos. For example, if we wanted to look at the number of times a current news topic has appeared in the the tweets of a group of Twitter users, we can come up with a list of target texts to compare to the text in the tweets. This may be helpful also in identifying hashtags that are related to a certain topic, since different hashtags made by the public are often similar but not exatly the same.**
+
+##3. Data Cleaning
+
+Perform some data cleaning using the provided file, “patent_drawing.csv”. “Patent_drawing.csv” contains a list of patents and a short description of each drawing included with a patent grant. For example, patent number 0233365 (https://patents.google.com/patent/US20030233365A1/en) has 16 images. For each image, there is a brief description of the drawings. The description is included in the “text” field in patent_drawing.csv. 
+
+```{r}
+#read in the patents dataset
+patents <- read_csv("patent_drawing.csv")
+
+#view the dataset by patent ID
+patents %>% arrange(patent_id)
+```
+
+Let’s say that we are interested in understanding:
+
+###a.
+How many of the field descriptions reference a perspective that is not standard (i.e. viewed from the top, bottom, front or rear)? Specifically, write code to count how many of the rows have the words "view" or "perspective" but do not include "bottom", "top", "front" or "rear" in  in the text field?
+
+```{r}
+#find all descriptions that have the desired words
+patents_1 <- rbind(patents[contains("perspective", ignore.case = TRUE, vars = patents$text),],
+                       patents[contains("view", ignore.case = TRUE, vars = patents$text),])
+
+#find all descriptions that have the undesired words
+patents_2 <- rbind(patents[contains("bottom", ignore.case = TRUE, vars = patents$text),],
+                      patents[contains("top",    ignore.case = TRUE, vars = patents$text),],
+                      patents[contains("front",  ignore.case = TRUE, vars = patents$text),],
+                      patents[contains("rear",   ignore.case = TRUE, vars = patents$text),])
+
+#make final dataset that includes desired words but excludes undesired words
+patents_include <- distinct(patents_1[!(patents_1$uuid %in% patents_2$uuid),])
+
+#view final dataset
+patents_include
+
+#the the number of rows in final dataset
+nrow(patents_include)
+```
+
+**3665 of the field descriptions reference a perspective that is not standard.**
+
+###b.
+What is the average number of drawing descriptions per patent?
+
+```{r}
+patent_sum <- patents %>%
+  group_by(patent_id) %>%
+  summarize(count = n())
+
+patent_sum
+
+mean(patent_sum$count)
+```
+
+**The average number of drawing descriptions per patent is 7.44, or between 7 and 8 descriptions.**
+
+
+
+
